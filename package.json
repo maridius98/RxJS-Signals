@@ -20,6 +20,7 @@
   "dependencies": {
     "browserify": "^17.0.0",
     "d3": "^7.8.5",
+    "mathjs": "^11.8.2",
     "react": "^18.2.0",
     "rxjs": "^7.8.1",
     "smoothie": "^1.36.1"
