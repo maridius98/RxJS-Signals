@@ -1,8 +1,8 @@
-import { interval, take, map, BehaviorSubject, Observable } from "rxjs";
+import { take, map, BehaviorSubject, Observable } from "rxjs";
 import { formulaParser } from "./parser";
 
 function createPausableObservable(interval: BehaviorSubject<number>) {
-    let paused = true;
+    let paused = false;
     let value: number = 0;
     
     let intervalId: any;
@@ -17,7 +17,6 @@ function createPausableObservable(interval: BehaviorSubject<number>) {
         }, newInterval);
       });
       
-  
       return () => {
         clearInterval(intervalId);
         intervalSub.unsubscribe();
@@ -26,29 +25,24 @@ function createPausableObservable(interval: BehaviorSubject<number>) {
     
     const pausableObservable = {
       observable: internalObservable,
-      pauseOrResume: () => {
-        paused = !paused;
+      pauseOrResume: (pause: boolean) => {
+        paused = pause;
       }
     }
   
     return pausableObservable;
   }
+
+  export const subjectInterval = new BehaviorSubject<number>(1);
   
-  const subjectInterval = new BehaviorSubject<number>(1);
-  
-  const pausableObservable = createPausableObservable(subjectInterval);
-  pausableObservable.observable.subscribe((value) => console.log(value));
-  
-  interval(1000).subscribe(() => {
-    pausableObservable.pauseOrResume();
-  })
+  export const pausableObservable = createPausableObservable(subjectInterval);
   
   export const emittedSignal = pausableObservable.observable.pipe(
     map((t) => ({
       x: t,
       y: formulaParser.evaluate(`f(${t / 100})`),
     })),
-    take(7000),
+    take(2000),
   );
   
  

@@ -24,4 +24,4 @@ const math = create({
 });
 
 export const formulaParser = math.parser();
-formulaParser.evaluate('f(t) = exp(-0.1 * t) * sin((2 / 3) * t)');
+//formulaParser.evaluate('f(t) = exp(-0.1 * t) * sin((2 / 3) * t)');
