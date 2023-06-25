@@ -1,8 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { pausableObservable, subjectInterval } from './signals';
+import { Signal } from './signal';
 import { formulaParser } from "./parser";
+import { BehaviorSubject } from 'rxjs';
+import { chart, createRealTimeLineChart } from './diagram';
+import { drawChart } from './main';
 
 const App = () => {
+    const signal = Signal.getInstance();
     const [formula1, setFormula1] = useState('');
     const [formula2, setFormula2] = useState('');
     const [intervalValue, setIntervalValue] = useState(1);
@@ -49,17 +53,24 @@ const App = () => {
         formulaParser.clear();
         console.log(formula1);
         formulaParser.evaluate("f(t) = " + formula1);
-        //formulaParser.evaluate("f2(t) = " + formula2);
+        if (signal.pausableObservable)
+            signal.pausableObservable.pauseOrResume(true);
+        chart.resetChart();
+        signal.createPausableObservable();
+        signal.emitSignal(100);
+        drawChart();
         setIsPaused(() => false);
     };
 
     useEffect(() => {
-        pausableObservable.pauseOrResume(isPaused);
-        }, [isPaused]);
+        if (signal.pausableObservable){
+            signal.pausableObservable.pauseOrResume(isPaused);
+        }
+    }, [isPaused]);
 
     useEffect(() => {
-    subjectInterval.next(intervalValue);
-        }, [intervalValue]);
+        signal.intervalSubject.next(intervalValue);
+    }, [intervalValue]);
 
   
     return (

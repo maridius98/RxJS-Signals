@@ -5,7 +5,7 @@ export type point = {
     y: number
   }
 
-function createRealTimeLineChart() {
+export function createRealTimeLineChart() {
     const margin = { top: 20, right: 20, bottom: 30, left: 50 };
     const width = 800 - margin.left - margin.right;
     const height = 500 - margin.top - margin.bottom;
@@ -28,6 +28,12 @@ function createRealTimeLineChart() {
       .attr("transform", `translate(${margin.left},${margin.top})`);
   
     const data: point[] = [];
+
+    const resetChart = () => {
+      data.length = 0;
+      svg.selectAll(".line").remove();
+      svg.selectAll(".axis").remove();
+    };
   
     const updateChart = (point: point) => {
       data.push(point);
@@ -64,8 +70,11 @@ function createRealTimeLineChart() {
         .call(d3.axisLeft(y));
     };
   
-    return updateChart;
+    return {
+      updateChart,
+      resetChart
+    }
   }
   
-export const updateChart = createRealTimeLineChart();
+export const chart = createRealTimeLineChart();
   
