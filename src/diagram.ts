@@ -2,7 +2,8 @@ import * as d3 from "d3";
 
 export type point = {
     x: number,
-    y: number
+    y: number,
+    isVertex: boolean
   }
 
 export function createRealTimeLineChart() {
@@ -18,6 +19,12 @@ export function createRealTimeLineChart() {
       .curve(d3.curveBasis)
       .x((d) => x(d.x))
       .y((d) => y(d.y));
+
+    const line2 = d3
+      .line<point>()
+      .curve(d3.curveBasis)
+      .x((d) => x(d.x))
+      .y((d) => y(d.y));
   
     const svg = d3
       .select("#chart-container")
@@ -28,6 +35,7 @@ export function createRealTimeLineChart() {
       .attr("transform", `translate(${margin.left},${margin.top})`);
   
     const data: point[] = [];
+    const data2: point[] = [];
 
     const resetChart = () => {
       data.length = 0;
@@ -35,7 +43,29 @@ export function createRealTimeLineChart() {
       svg.selectAll(".axis").remove();
     };
   
-    const updateChart = (point: point) => {
+    const updateChart = (point: point, lineNumber: number) => {
+
+      const pushData = (data: point[], point: point, line: d3.Line<point>, num: number, color: string) => {
+        data.push(point);
+        y.domain([d3.min(data, (d) => d.y), d3.max(data, (d) => d.y)]);
+        svg.selectAll(".line").remove();
+  
+        svg
+          .append("path")
+          .datum(data)
+          .attr("class", `line${num}`)
+          .attr("d", line)
+          .style('stroke', color)
+          .style('stroke-width', 2)
+          .style('fill', 'none');
+      }
+
+      if (lineNumber == 1){
+        pushData(data, point, line, 1, "black");
+      }
+      else if (lineNumber == 2){
+        pushData(data2, point, line2, 2, "gray");
+      }
       data.push(point);
   
       x.domain(d3.extent(data, (d) => d.x));
@@ -57,6 +87,28 @@ export function createRealTimeLineChart() {
         .style('fill', 'none');
   
       svg.selectAll(".axis").remove();
+
+      svg.selectAll("circle")
+        .data(data)
+        .enter()
+        .append("circle")
+        .attr("cx", (d: point) => x(d.x))
+        .attr("cy", (d: point) => y(d.y))
+        .attr("r", (d: point) => d.isVertex ? 5 : 0)
+        .style('fill', 'red');
+
+        const circles = svg.selectAll("circle").data(data);
+
+      circles.enter()
+        .append("circle")
+        .attr("r", (d: point) => d.isVertex ? 5 : 0)
+        .style('fill', 'red');
+
+      circles
+        .attr("cx", (d: point) => x(d.x))
+        .attr("cy", (d: point) => y(d.y));
+
+      circles.exit().remove();
   
       svg
         .append("g")
