@@ -1,4 +1,4 @@
-import { take, map, BehaviorSubject, Observable } from "rxjs";
+import { take, map, BehaviorSubject, Observable, bufferCount, pluck, tap } from "rxjs";
 import { formulaParser } from "./parser";
 import { point } from "./diagram";
 
@@ -59,9 +59,11 @@ createPausableObservable() {
 
   emitSignal(fraction: number) {
     this.emittedSignal = this.pausableObservable.observable.pipe(
+      bufferCount(3, 1),
       map((t) => ({
-        x: t,
-        y: formulaParser.evaluate(`f(${t / fraction})`),
+        x: t[1],
+        y: formulaParser.evaluate(`f(${t[1] / fraction})`),
+        isVertex: ((t[0] < t[1] && t[2] < t[1]) || (t[0] > t[1] && t[2] > t[1]))
       })),
       take(2000),
     );
