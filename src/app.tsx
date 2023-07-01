@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Signal, signal2, signal1 } from './signal';
+import { Signal, signal2, signal1, combineSignals } from './signal';
 import { formulaParser } from "./parser";
-import { BehaviorSubject } from 'rxjs';
-import { chart, createRealTimeLineChart } from './diagram';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { chart, createRealTimeLineChart, point } from './diagram';
 import { drawChart } from './main';
+import { number, sign } from 'mathjs';
 
 const App = () => {
     const [formula1, setFormula1] = useState('');
@@ -51,21 +52,33 @@ const App = () => {
       event.preventDefault();
       chart.resetChart();
       formulaParser.clear();
+      const signals : Observable<point>[] = [];
 
-      const parseFormula = (signal: Signal, formula: string, num: number) => {
-        formulaParser.evaluate(`f${num}(t) = ` + formula);
-        if (signal.pausableObservable)
+      formulaParser.evaluate(`f1(t) = ` + formula1);
+      formulaParser.evaluate(`f2(t) = ` + formula2)
+
+      const emitSignal = (signal: Signal, num: number) => {
+        if (signal.pausableObservable) {
           signal.pausableObservable.pauseOrResume(true);
+        }
         signal.createPausableObservable();
         signal.emitSignal(100, num);
       }
 
-      if (formula1)
-        parseFormula(signal1, formula1, 1);
-      if (formula2)
-        parseFormula(signal2, formula2, 2);
+      if (formula1) {
+        emitSignal(signal1, 1);
+      }
+      if (formula2) {
+        emitSignal(signal2, 2);
+      }
+      
+      if (mergeFunctions){
+        signals.push(combineSignals(signal1.emittedSignal, signal2.emittedSignal));
+      } else{
+        signals.push(signal1.emittedSignal, signal2.emittedSignal);
+      }
 
-      drawChart();
+      drawChart(signals);
       setIsPaused(() => false);
   };
 

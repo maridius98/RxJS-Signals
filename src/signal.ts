@@ -1,4 +1,4 @@
-import { take, map, BehaviorSubject, Observable, bufferCount, pluck, tap } from "rxjs";
+import { take, map, BehaviorSubject, Observable, bufferCount, pluck, tap, combineLatest } from "rxjs";
 import { formulaParser } from "./parser";
 import { point } from "./diagram";
 import { pointRadial } from "d3";
@@ -77,11 +77,16 @@ createPausableObservable() {
       this._callbacks.push(callback);
     }
   }
-
-
 }
 
 export const signal1 = new Signal();
 export const signal2 = new Signal();
+
+export const combineSignals = (signal1: Observable<point>, signal2: Observable<point>) => {
+  const returnSignal = combineLatest(signal1, signal2, (s1, s2) => {
+    return {y: s1.y * s2.y, x: s1.x}
+  });
+  return returnSignal;
+}
 
 

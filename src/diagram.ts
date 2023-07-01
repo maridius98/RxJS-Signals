@@ -3,7 +3,7 @@ import * as d3 from "d3";
 export type point = {
     x: number,
     y: number,
-    isVertex: boolean
+    isVertex?: boolean
   }
 
 export function createRealTimeLineChart() {
@@ -47,9 +47,6 @@ export function createRealTimeLineChart() {
   
     const updateChart = (point: point, lineNumber: number) => {
 
-      const circles1 = svg.selectAll(`circle1`).data(data);
-      const circles2 = svg.selectAll(`circle2`).data(data2);
-
       const pushData = (data: point[], point: point, line: d3.Line<point>, num: number, color: string) => {
         data.push(point);
         if (data.length>2)
@@ -67,27 +64,23 @@ export function createRealTimeLineChart() {
           .style('fill', 'none');       
       }
 
-      // Assume data1 and data2 are your two data arrays
+
       const drawCircles = (data: point[], num: number) => {
-        // Bind data
+
         let circles = svg.selectAll(`.circle${num}`).data(data);
-    
-        // Handle the exit selection
         circles.exit().remove();
-    
-        // Handle the update selection
+
         circles.attr("cx", d => d.isVertex ? x(d.x) : null)
-               .attr("cy", d => d.isVertex ? y(d.y) : null);
+          .attr("cy", d => d.isVertex ? y(d.y) : null);
     
-        // Handle the enter selection
         circles.enter()
-               .filter(d => d.isVertex)  // Only consider points where isVertex is true
-               .append("circle")
-               .attr("class", `circle${num}`)
-               .attr("cx", d => x(d.x))
-               .attr("cy", d => y(d.y))
-               .attr("r", 5)
-               .style("fill", "red");
+          .filter(d => d.isVertex)  
+          .append("circle")
+          .attr("class", `circle${num}`)
+          .attr("cx", d => x(d.x))
+          .attr("cy", d => y(d.y))
+          .attr("r", 5)
+          .style("fill", "red");
     }
     
 
