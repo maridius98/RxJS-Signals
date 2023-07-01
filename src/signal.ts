@@ -1,17 +1,9 @@
 import { take, map, BehaviorSubject, Observable, bufferCount, pluck, tap } from "rxjs";
 import { formulaParser } from "./parser";
 import { point } from "./diagram";
+import { pointRadial } from "d3";
 
 export class Signal {
-
-private static instance: Signal;
-
-public static getInstance(): Signal {
-  if (!Signal.instance) {
-    Signal.instance = new Signal();
-  }
-  return Signal.instance;
-}
 
 pausableObservable: {
     observable: Observable<number>;
@@ -57,13 +49,17 @@ createPausableObservable() {
     this.pausableObservable = pausableObservable;
   }
 
-  emitSignal(fraction: number) {
+  emitSignal(fraction: number, signalNumber: number) {
     this.emittedSignal = this.pausableObservable.observable.pipe(
+      map((t) => ({
+        x: t,
+        y: formulaParser.evaluate(`f${signalNumber}(${t / fraction})`),
+      })),
       bufferCount(3, 1),
       map((t) => ({
-        x: t[1],
-        y: formulaParser.evaluate(`f(${t[1] / fraction})`),
-        isVertex: ((t[0] < t[1] && t[2] < t[1]) || (t[0] > t[1] && t[2] > t[1]))
+        x: t[1].x,
+        y: t[1].y,
+        isVertex: ((t[0].y < t[1].y && t[2].y < t[1].y) || (t[0].y > t[1].y && t[2].y > t[1].y))
       })),
       take(2000),
     );
@@ -84,6 +80,8 @@ createPausableObservable() {
 
 
 }
-  
- 
+
+export const signal1 = new Signal();
+export const signal2 = new Signal();
+
 

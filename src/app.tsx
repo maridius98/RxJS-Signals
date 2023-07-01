@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Signal } from './signal';
+import { Signal, signal2, signal1 } from './signal';
 import { formulaParser } from "./parser";
 import { BehaviorSubject } from 'rxjs';
 import { chart, createRealTimeLineChart } from './diagram';
 import { drawChart } from './main';
 
 const App = () => {
-    const signal = Signal.getInstance();
     const [formula1, setFormula1] = useState('');
     const [formula2, setFormula2] = useState('');
     const [intervalValue, setIntervalValue] = useState(1);
@@ -49,27 +48,38 @@ const App = () => {
     };
   
     const handleSubmit = (event: any) => {
-        event.preventDefault();
-        formulaParser.clear();
-        console.log(formula1);
-        formulaParser.evaluate("f(t) = " + formula1);
+      event.preventDefault();
+      chart.resetChart();
+      formulaParser.clear();
+
+      const parseFormula = (signal: Signal, formula: string, num: number) => {
+        formulaParser.evaluate(`f${num}(t) = ` + formula);
         if (signal.pausableObservable)
-            signal.pausableObservable.pauseOrResume(true);
-        chart.resetChart();
+          signal.pausableObservable.pauseOrResume(true);
         signal.createPausableObservable();
-        signal.emitSignal(100);
-        drawChart();
-        setIsPaused(() => false);
-    };
+        signal.emitSignal(100, num);
+      }
+
+      if (formula1)
+        parseFormula(signal1, formula1, 1);
+      if (formula2)
+        parseFormula(signal2, formula2, 2);
+
+      drawChart();
+      setIsPaused(() => false);
+  };
 
     useEffect(() => {
-        if (signal.pausableObservable){
-            signal.pausableObservable.pauseOrResume(isPaused);
+        if (signal1.pausableObservable){
+            signal1.pausableObservable.pauseOrResume(isPaused);
+        }
+        if (signal2.pausableObservable){
+          signal2.pausableObservable.pauseOrResume(isPaused);
         }
     }, [isPaused]);
 
     useEffect(() => {
-        signal.intervalSubject.next(intervalValue);
+        signal1.intervalSubject.next(intervalValue);
     }, [intervalValue]);
 
   

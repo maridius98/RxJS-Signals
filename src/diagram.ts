@@ -14,7 +14,7 @@ export function createRealTimeLineChart() {
     const x = d3.scaleLinear().range([0, width]);
     const y = d3.scaleLinear().range([height, 0]);
   
-    const line = d3
+    const line1 = d3
       .line<point>()
       .curve(d3.curveBasis)
       .x((d) => x(d.x))
@@ -39,17 +39,24 @@ export function createRealTimeLineChart() {
 
     const resetChart = () => {
       data.length = 0;
-      svg.selectAll(".line").remove();
+      data2.length = 0;
+      svg.selectAll(".line1").remove();
+      svg.selectAll(".line2").remove();
       svg.selectAll(".axis").remove();
     };
   
     const updateChart = (point: point, lineNumber: number) => {
 
+      const circles1 = svg.selectAll(`circle1`).data(data);
+      const circles2 = svg.selectAll(`circle2`).data(data2);
+
       const pushData = (data: point[], point: point, line: d3.Line<point>, num: number, color: string) => {
         data.push(point);
+        if (data.length>2)
+          x.domain(d3.extent(data, (d) => d.x));
         y.domain([d3.min(data, (d) => d.y), d3.max(data, (d) => d.y)]);
-        svg.selectAll(".line").remove();
-  
+        svg.selectAll(`.line${num}`).remove();
+
         svg
           .append("path")
           .datum(data)
@@ -57,58 +64,43 @@ export function createRealTimeLineChart() {
           .attr("d", line)
           .style('stroke', color)
           .style('stroke-width', 2)
-          .style('fill', 'none');
+          .style('fill', 'none');       
       }
 
+      // Assume data1 and data2 are your two data arrays
+      const drawCircles = (data: point[], num: number) => {
+        // Bind data
+        let circles = svg.selectAll(`.circle${num}`).data(data);
+    
+        // Handle the exit selection
+        circles.exit().remove();
+    
+        // Handle the update selection
+        circles.attr("cx", d => d.isVertex ? x(d.x) : null)
+               .attr("cy", d => d.isVertex ? y(d.y) : null);
+    
+        // Handle the enter selection
+        circles.enter()
+               .filter(d => d.isVertex)  // Only consider points where isVertex is true
+               .append("circle")
+               .attr("class", `circle${num}`)
+               .attr("cx", d => x(d.x))
+               .attr("cy", d => y(d.y))
+               .attr("r", 5)
+               .style("fill", "red");
+    }
+    
+
       if (lineNumber == 1){
-        pushData(data, point, line, 1, "black");
+        pushData(data, point, line1, 1, "black");
+        drawCircles(data, 1);
       }
       else if (lineNumber == 2){
         pushData(data2, point, line2, 2, "gray");
+        drawCircles(data2, 2);
       }
-      data.push(point);
-  
-      x.domain(d3.extent(data, (d) => d.x));
-      y.domain([d3.min(data, (d) => d.y), d3.max(data, (d) => d.y)]);
-  
-      if (data.length === 1) {
-        return;
-      }
-  
-      svg.selectAll(".line").remove();
-  
-      svg
-        .append("path")
-        .datum(data)
-        .attr("class", "line")
-        .attr("d", line)
-        .style('stroke', 'black')
-        .style('stroke-width', 2)
-        .style('fill', 'none');
   
       svg.selectAll(".axis").remove();
-
-      svg.selectAll("circle")
-        .data(data)
-        .enter()
-        .append("circle")
-        .attr("cx", (d: point) => x(d.x))
-        .attr("cy", (d: point) => y(d.y))
-        .attr("r", (d: point) => d.isVertex ? 5 : 0)
-        .style('fill', 'red');
-
-        const circles = svg.selectAll("circle").data(data);
-
-      circles.enter()
-        .append("circle")
-        .attr("r", (d: point) => d.isVertex ? 5 : 0)
-        .style('fill', 'red');
-
-      circles
-        .attr("cx", (d: point) => x(d.x))
-        .attr("cy", (d: point) => y(d.y));
-
-      circles.exit().remove();
   
       svg
         .append("g")
