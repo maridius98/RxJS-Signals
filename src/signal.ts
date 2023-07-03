@@ -1,7 +1,6 @@
-import { take, map, BehaviorSubject, Observable, bufferCount, pluck, tap, combineLatest } from "rxjs";
+import { take, map, BehaviorSubject, Observable, bufferCount, pluck, tap, combineLatest, OperatorFunction } from "rxjs";
 import { formulaParser } from "./parser";
 import { point } from "./diagram";
-import { pointRadial } from "d3";
 
 export class Signal {
 
@@ -10,31 +9,36 @@ pausableObservable: {
     pauseOrResume: (pause: boolean) => void;
 }
 
+
 emittedSignal: Observable<point>;
 
 intervalSubject: BehaviorSubject<number> = new BehaviorSubject<number>(1);
 
+addOperators(operators: OperatorFunction<any, any>[]) {
+  this.emittedSignal = operators.reduce((observable, operator) => observable.pipe(operator), this.emittedSignal);
+}
+
 createPausableObservable() {
-    let paused = false;
-    let value: number = 0;
-    
-    let intervalId: any;
+  let paused = false;
+  let value: number = 0;
   
-    const internalObservable = new Observable<number>((observer) => {
-      let intervalSub = this.intervalSubject.subscribe((newInterval) => {
-        clearInterval(intervalId);
-        intervalId = setInterval(() => {
-          if (!paused){
-            observer.next(value++);
-          }
-        }, newInterval);
-      });
-      
-      return () => {
-        clearInterval(intervalId);
-        intervalSub.unsubscribe();
-      };
+  let intervalId: any;
+
+  const internalObservable = new Observable<number>((observer) => {
+    let intervalSub = this.intervalSubject.subscribe((newInterval) => {
+      clearInterval(intervalId);
+      intervalId = setInterval(() => {
+        if (!paused){
+          observer.next(value++);
+        }
+      }, newInterval);
     });
+    
+    return () => {
+      clearInterval(intervalId);
+      intervalSub.unsubscribe();
+    };
+   });
     
     const pausableObservable = {
       observable: internalObservable,
