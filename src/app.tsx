@@ -65,8 +65,6 @@ const App = () => {
         signal.emitSignal(100, num);
       }
 
-      
-
       if (formula1) {
         emitSignal(signal1, 1);
         signal1.addOperators([filter((signal: point) => signal.y > 0.7), tap(console.log)]);
@@ -97,6 +95,7 @@ const App = () => {
 
     useEffect(() => {
         signal1.intervalSubject.next(intervalValue);
+        signal2.intervalSubject.next(intervalValue);
     }, [intervalValue]);
 
   

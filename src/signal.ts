@@ -68,19 +68,8 @@ createPausableObservable() {
       take(2000),
     );
   
-    this._callbacks.forEach((callback) => callback(this.emittedSignal));
-    this._callbacks = [];
   }
 
-  private _callbacks: Array<(emittedSignal: Observable<point>) => void> = [];
-
-  onEmittedSignalDefined(callback: (emittedSignal: Observable<point>) => void) {
-    if (this.emittedSignal) {
-      callback(this.emittedSignal);
-    } else {
-      this._callbacks.push(callback);
-    }
-  }
 }
 
 export const signal1 = new Signal();
