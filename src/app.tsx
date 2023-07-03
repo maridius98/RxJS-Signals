@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Signal, signal2, signal1, combineSignals } from './signal';
 import { formulaParser } from "./parser";
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, filter, tap } from 'rxjs';
 import { chart, createRealTimeLineChart, point } from './diagram';
 import { drawChart } from './main';
 import { number, sign } from 'mathjs';
@@ -65,11 +65,15 @@ const App = () => {
         signal.emitSignal(100, num);
       }
 
+      
+
       if (formula1) {
         emitSignal(signal1, 1);
+        signal1.addOperators([filter((signal: point) => signal.y > 0.7), tap(console.log)]);
       }
       if (formula2) {
         emitSignal(signal2, 2);
+        signal2.addOperators([filter((signal: point) => signal.y > -0.7)]);
       }
       
       if (mergeFunctions){
