@@ -4,7 +4,7 @@ import { formulaParser } from "./parser";
 import { BehaviorSubject, Observable, filter, tap } from 'rxjs';
 import { chart, createRealTimeLineChart, point } from './diagram';
 import { drawChart } from './main';
-import { number, sign } from 'mathjs';
+import { boolean, number, sign } from 'mathjs';
 
 const App = () => {
     const [formula1, setFormula1] = useState('');
@@ -59,24 +59,24 @@ const App = () => {
 
       const emitSignal = (signal: Signal, num: number) => {
         if (signal.pausableObservable) {
-          signal.pausableObservable.pauseOrResume(true);
+          signal.resume();
         }
-        signal.createPausableObservable();
         signal.emitSignal(100, num);
       }
 
       if (formula1) {
         emitSignal(signal1, 1);
-        signal1.addOperators([filter((signal: point) => signal.y > 0.7), tap(console.log)]);
+        signal1.addOperators([tap((point: point) => console.log(point.x))]);
+        //signal1.addOperators([filter((signal: point) => signal.y > 0.7), tap(console.log)]);
       }
       if (formula2) {
         emitSignal(signal2, 2);
-        signal2.addOperators([filter((signal: point) => signal.y > -0.7)]);
+        //signal2.addOperators([filter((signal: point) => signal.y > -0.7)]);
       }
       
       if (mergeFunctions){
         signals.push(combineSignals(signal1.emittedSignal, signal2.emittedSignal));
-      } else{
+      } else {
         signals.push(signal1.emittedSignal, signal2.emittedSignal);
       }
 
@@ -85,17 +85,18 @@ const App = () => {
   };
 
     useEffect(() => {
-        if (signal1.pausableObservable){
-            signal1.pausableObservable.pauseOrResume(isPaused);
-        }
-        if (signal2.pausableObservable){
-          signal2.pausableObservable.pauseOrResume(isPaused);
+        if (isPaused){
+          signal1.pause();
+          signal2.pause();
+        } else {
+          signal1.resume();
+          signal2.resume();
         }
     }, [isPaused]);
 
     useEffect(() => {
-        signal1.intervalSubject.next(intervalValue);
-        signal2.intervalSubject.next(intervalValue);
+        signal1.changeInterval(intervalValue);
+        signal2.changeInterval(intervalValue);
     }, [intervalValue]);
 
   

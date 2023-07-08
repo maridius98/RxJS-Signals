@@ -1,60 +1,47 @@
-import { take, map, BehaviorSubject, Observable, bufferCount, pluck, tap, combineLatest, OperatorFunction } from "rxjs";
+import { take, map, BehaviorSubject, Observable, bufferCount, pluck, tap, combineLatest, OperatorFunction, switchMap, NEVER, interval, withLatestFrom, filter, scan, of, share, startWith } from "rxjs";
 import { formulaParser } from "./parser";
 import { point } from "./diagram";
 
 export class Signal {
 
-pausableObservable: {
-    observable: Observable<number>;
-    pauseOrResume: (pause: boolean) => void;
-}
+  private intervalSubject = new BehaviorSubject<number>(1);
+  private pauseSubject = new BehaviorSubject<boolean>(false);
+  private counter = 0;
 
+  pausableObservable = this.intervalSubject.pipe(
+    switchMap(intervalValue => this.pauseSubject.pipe(
+      switchMap(paused => paused ? NEVER : interval(intervalValue)
+        .pipe(
+          startWith(this.counter), 
+          switchMap(() => {
+            this.counter++;
+            return of(this.counter);
+          })
+        )
+      )
+    )),
+  );
 
-emittedSignal: Observable<point>;
+  changeInterval(value: number) {
+    this.intervalSubject.next(value);
+  }
 
-intervalSubject: BehaviorSubject<number> = new BehaviorSubject<number>(1);
+  pause() {
+    this.pauseSubject.next(true);
+  }
 
-addOperators(operators: OperatorFunction<any, any>[]) {
-  this.emittedSignal = operators.reduce((observable, operator) => observable.pipe(operator), this.emittedSignal);
-}
+  resume() {
+    this.pauseSubject.next(false);
+  }
 
-createPausableObservable() {
-  let paused = false;
-  let value: number = 0;
-  
-  let intervalId: any;
+  emittedSignal: Observable<point>;
 
-  const internalObservable = new Observable<number>((observer) => {
-    let intervalSub = this.intervalSubject.subscribe((newInterval) => {
-      clearInterval(intervalId);
-      intervalId = setInterval(() => {
-        if (!paused){
-          observer.next(value++);
-        }
-      }, newInterval);
-    });
-    
-    return () => {
-      clearInterval(intervalId);
-      intervalSub.unsubscribe();
-    };
-   });
-    
-    const pausableObservable = {
-      observable: internalObservable,
-      pauseOrResume: (pause: boolean) => {
-        paused = pause;
-      },
-      reset: () => {
-        value = 0;
-      }
-    }
-  
-    this.pausableObservable = pausableObservable;
+  addOperators(operators: OperatorFunction<any, any>[]) {
+    this.emittedSignal = operators.reduce((observable, operator) => observable.pipe(operator), this.emittedSignal);
   }
 
   emitSignal(fraction: number, signalNumber: number) {
-    this.emittedSignal = this.pausableObservable.observable.pipe(
+    this.emittedSignal = this.pausableObservable.pipe(
       map((t) => ({
         x: t,
         y: formulaParser.evaluate(`f${signalNumber}(${t / fraction})`),
@@ -65,7 +52,7 @@ createPausableObservable() {
         y: t[1].y,
         isVertex: ((t[0].y < t[1].y && t[2].y < t[1].y) || (t[0].y > t[1].y && t[2].y > t[1].y))
       })),
-      take(2000),
+      take(500),
     );
   
   }
