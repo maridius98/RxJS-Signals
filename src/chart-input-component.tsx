@@ -6,8 +6,9 @@ import { createRealTimeLineChart, point } from './diagram';
 
 const ChartWithInputs = () => {
   const graphRef = useRef(null);
-  const chart = createRealTimeLineChart(graphRef.current);
-  const signal = new Signal();
+  const chartRef = useRef(null);
+  const signalRef = useRef<Signal>(null);
+  const subscriptionRef = useRef(null);
 
   const [formula, setFormula] = useState('');
   const [intervalValue, setIntervalValue] = useState(1);
@@ -23,7 +24,7 @@ const ChartWithInputs = () => {
   };
 
   const handleIntervalChange = (event: any) => {
-    event.preventDefault();
+    
     setIntervalValue(Number(event.target.value));
   };
 
@@ -47,35 +48,48 @@ const ChartWithInputs = () => {
     setMergeFunctions((prevMergeFunctions) => !prevMergeFunctions);
   };
 
-  const drawChart = (signal: Observable<point>, index: number) => {
-    signal.subscribe(point => {
+  const renderChart = (signal: Observable<point>, index: number, chart: any) => {
+    subscriptionRef.current = signal.subscribe(point => {
       chart.updateChart(point, index+1)
     })
   }
 
   const handleSubmit = (event: any) => {
     event.preventDefault();
-    chart.resetChart();
+    if (!chartRef.current){ 
+      chartRef.current = createRealTimeLineChart(graphRef.current);
+    }
+    if (subscriptionRef.current) {
+      subscriptionRef.current.unsubscribe();
+    }
+    
+    signalRef.current = new Signal();
+    chartRef.current.resetChart();
     formulaParser.clear();
     formulaParser.evaluate(`f1(t) = ` + formula);
-    signal.emitSignal(100, 1);
-    signal.appendOperators([tap(p => console.log(p.x))]);
+    signalRef.current.emitSignal(100, 1);
+    signalRef.current.appendOperators([tap(p => console.log(p.x))]);
 
-    drawChart(signal.emittedSignal, 1);
+    renderChart(signalRef.current.emittedSignal, 1, chartRef.current);
     setIsPaused(() => false);
-};
+  };
 
-  // useEffect(() => {
-  //     if (isPaused){
-  //       signal.pause();
-  //     } else {
-  //       signal.resume();
-  //     }
-  // }, [isPaused]);
+  useEffect(() => {
+    if (signalRef.current){
+      if (isPaused){
+        signalRef.current.pause();
+      } else {
+        signalRef.current.resume();
+      }
+    }
+  }, [isPaused]);
+  
 
-  // useEffect(() => {
-  //     signal.changeInterval(intervalValue);
-  // }, [intervalValue]);
+  useEffect(() => {
+    if (signalRef.current){
+     signalRef.current.changeInterval(intervalValue);
+    }
+  }, [intervalValue]);
 
   return (
     <div>

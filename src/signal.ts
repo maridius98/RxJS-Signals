@@ -1,4 +1,4 @@
-import { take, map, BehaviorSubject, Observable, bufferCount, combineLatest, OperatorFunction, switchMap, NEVER, interval, of, startWith } from "rxjs";
+import { take, map, BehaviorSubject, Observable, bufferCount, combineLatest, OperatorFunction, switchMap, NEVER, interval, of, startWith, takeUntil } from "rxjs";
 import { formulaParser } from "./parser";
 import { point } from "./diagram";
 
@@ -22,8 +22,8 @@ export class Signal {
     )),
   );
 
-  resetCounter(){
-    this.counter = 0;
+  delete(){
+    delete this.emittedSignal;
   }
 
   changeInterval(value: number) {
