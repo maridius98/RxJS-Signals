@@ -6,7 +6,7 @@ export type point = {
     isVertex?: boolean
   }
 
-export function createRealTimeLineChart() {
+export function createRealTimeLineChart(containerId : HTMLElement) {
     const margin = { top: 20, right: 20, bottom: 30, left: 50 };
     const width = 800 - margin.left - margin.right;
     const height = 500 - margin.top - margin.bottom;
@@ -27,7 +27,7 @@ export function createRealTimeLineChart() {
       .y((d) => y(d.y));
   
     const svg = d3
-      .select("#chart-container")
+      .select(containerId)
       .append("svg")
       .attr("width", width + margin.left + margin.right)
       .attr("height", height + margin.top + margin.bottom)
@@ -113,5 +113,5 @@ export function createRealTimeLineChart() {
     }
   }
   
-export const chart = createRealTimeLineChart();
+
   

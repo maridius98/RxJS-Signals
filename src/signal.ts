@@ -1,4 +1,4 @@
-import { take, map, BehaviorSubject, Observable, bufferCount, pluck, tap, combineLatest, OperatorFunction, switchMap, NEVER, interval, withLatestFrom, filter, scan, of, share, startWith } from "rxjs";
+import { take, map, BehaviorSubject, Observable, bufferCount, combineLatest, OperatorFunction, switchMap, NEVER, interval, of, startWith } from "rxjs";
 import { formulaParser } from "./parser";
 import { point } from "./diagram";
 
@@ -22,6 +22,10 @@ export class Signal {
     )),
   );
 
+  resetCounter(){
+    this.counter = 0;
+  }
+
   changeInterval(value: number) {
     this.intervalSubject.next(value);
   }
@@ -36,7 +40,7 @@ export class Signal {
 
   emittedSignal: Observable<point>;
 
-  addOperators(operators: OperatorFunction<any, any>[]) {
+  appendOperators(operators: OperatorFunction<any, any>[]) {
     this.emittedSignal = operators.reduce((observable, operator) => observable.pipe(operator), this.emittedSignal);
   }
 
