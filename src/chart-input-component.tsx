@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Signal } from './signal';
 import { formulaParser } from "./parser";
-import { Observable, tap } from 'rxjs';
+import { Observable, take, tap } from 'rxjs';
 import { createRealTimeLineChart, point } from './diagram';
 
-const ChartWithInputs = () => {
+export const ChartWithInputs = () => {
   const graphRef = useRef(null);
   const chartRef = useRef(null);
   const signalRef = useRef<Signal>(null);
@@ -15,7 +15,6 @@ const ChartWithInputs = () => {
   const [isPaused, setIsPaused] = useState(true);
   const [filterValue, setFilterValue] = useState(-0.4);
   const [samplesValue, setLengthValue] = useState(3000);
-  const [showVertex, setShowVertex] = useState(false);
   const [mergeFunctions, setMergeFunctions] = useState(false);
 
   const handleFormula1Change = (event: any) => {
@@ -40,10 +39,6 @@ const ChartWithInputs = () => {
     setLengthValue(Number(event.target.value));
   };
 
-  const handleShowVertexToggle = () => {
-    setShowVertex((prevShowVertex) => !prevShowVertex);
-  };
-
   const handleMergeFunctionsToggle = () => {
     setMergeFunctions((prevMergeFunctions) => !prevMergeFunctions);
   };
@@ -52,6 +47,10 @@ const ChartWithInputs = () => {
     subscriptionRef.current = signal.subscribe(point => {
       chart.updateChart(point, index+1)
     })
+  }
+
+  const appendOperators = () => {
+    signalRef.current.appendOperators([take(samplesValue)]);
   }
 
   const handleSubmit = (event: any) => {
@@ -68,8 +67,9 @@ const ChartWithInputs = () => {
     formulaParser.clear();
     formulaParser.evaluate(`f1(t) = ` + formula);
     signalRef.current.emitSignal(100, 1);
-    signalRef.current.appendOperators([tap(p => console.log(p.x))]);
+    appendOperators();
 
+    signalRef.current.changeInterval(intervalValue);
     renderChart(signalRef.current.emittedSignal, 1, chartRef.current);
     setIsPaused(() => false);
   };
@@ -83,6 +83,12 @@ const ChartWithInputs = () => {
       }
     }
   }, [isPaused]);
+
+  useEffect(() => {
+    if (signalRef.current){
+      
+    }
+  }, [filterValue]);
   
 
   useEffect(() => {
@@ -129,23 +135,13 @@ const ChartWithInputs = () => {
           <div className="label-input">
             <label htmlFor="samples">Samples:</label>
             <input
-              type="range"
+              type="numeric"
               id="samples"
               min="10"
               max="5000"
               value={samplesValue}
               onChange={handleSamplesChange}
             />
-          </div>
-          <div>
-            <label>
-              <input
-                type="checkbox"
-                checked={showVertex}
-                onChange={handleShowVertexToggle}
-              />
-              Show Vertex
-            </label>
           </div>
           <div>
             <label>
@@ -168,12 +164,4 @@ const ChartWithInputs = () => {
   );
 };
 
-function HomePage() {
-  return (
-    <div className="App">
-      <ChartWithInputs />
-    </div>
-  );
-}
-
-export default HomePage;
+export default ChartWithInputs;

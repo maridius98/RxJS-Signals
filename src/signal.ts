@@ -1,11 +1,13 @@
 import { take, map, BehaviorSubject, Observable, bufferCount, combineLatest, OperatorFunction, switchMap, NEVER, interval, of, startWith, takeUntil } from "rxjs";
 import { formulaParser } from "./parser";
 import { point } from "./diagram";
+import { filter } from "rxjs";
 
 export class Signal {
 
   private intervalSubject = new BehaviorSubject<number>(1);
   private pauseSubject = new BehaviorSubject<boolean>(false);
+  private filterValue = new BehaviorSubject<number>(Infinity);
   private counter = 0;
 
   pausableObservable = this.intervalSubject.pipe(
@@ -55,8 +57,7 @@ export class Signal {
         x: t[1].x,
         y: t[1].y,
         isVertex: ((t[0].y < t[1].y && t[2].y < t[1].y) || (t[0].y > t[1].y && t[2].y > t[1].y))
-      })),
-      take(500),
+      }))
     );
   
   }

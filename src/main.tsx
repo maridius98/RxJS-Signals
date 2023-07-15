@@ -5,7 +5,8 @@ import ReactDOM from 'react-dom';
 //import App from './app';
 import { Observable, timer } from "rxjs";
 import HomePage from "./chart-input-component";
+import App from "./app";
 
-ReactDOM.render(<HomePage />, document.getElementById('root'));
+ReactDOM.render(<App />, document.getElementById('root'));
 
 
