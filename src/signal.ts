@@ -9,6 +9,7 @@ export class Signal {
   private pauseSubject = new BehaviorSubject<boolean>(false);
   private filterValue = new BehaviorSubject<number>(Infinity);
   private counter = 0;
+  emittedSignal: Observable<point>;
 
   pausableObservable = this.intervalSubject.pipe(
     switchMap(intervalValue => this.pauseSubject.pipe(
@@ -40,38 +41,41 @@ export class Signal {
     this.pauseSubject.next(false);
   }
 
-  emittedSignal: Observable<point>;
-
-  appendOperators(operators: OperatorFunction<any, any>[]) {
-    this.emittedSignal = operators.reduce((observable, operator) => observable.pipe(operator), this.emittedSignal);
+  combineSignals(signals: Signal[]) {
+    const emittedSignals = signals.flatMap(s => s.emittedSignal);
+    emittedSignals.push(this.emittedSignal);
+    this.emittedSignal = combineLatest(emittedSignals, (...points: point[]) => {
+      return points.reduce((acc, value) => {
+        return {
+          y: acc.y * value.y,
+          x: value.x
+        }
+      });
+    })
   }
 
-  emitSignal(fraction: number, signalNumber: number) {
-    this.emittedSignal = this.pausableObservable.pipe(
-      map((t) => ({
-        x: t,
-        y: formulaParser.evaluate(`f${signalNumber}(${t / fraction})`),
-      })),
+  showVertex(){
+    this.appendOperators([
       bufferCount(3, 1),
       map((t) => ({
         x: t[1].x,
         y: t[1].y,
         isVertex: ((t[0].y < t[1].y && t[2].y < t[1].y) || (t[0].y > t[1].y && t[2].y > t[1].y))
       }))
-    );
-  
+    ]
+  )}
+
+  appendOperators(operators: OperatorFunction<any, any>[]) {
+    this.emittedSignal = operators.reduce((observable, operator) => observable.pipe(operator), this.emittedSignal);
   }
 
+  emitSignal(fraction: number, formulaIndex: number) {
+    this.emittedSignal = this.pausableObservable.pipe(
+      map((t) => ({
+        x: t,
+        y: formulaParser.evaluate(`f${formulaIndex}(${t / fraction})`),
+      })),
+    )
+  }
 }
-
-export const signal1 = new Signal();
-export const signal2 = new Signal();
-
-export const combineSignals = (signal1: Observable<point>, signal2: Observable<point>) => {
-  const returnSignal = combineLatest(signal1, signal2, (s1, s2) => {
-    return {y: s1.y * s2.y, x: s1.x}
-  });
-  return returnSignal;
-}
-
 

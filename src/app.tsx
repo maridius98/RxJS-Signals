@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { ChartWithInputs } from './chart-input-component';
 
-// Your import statements for Chart and other required modules...
-
 let chartCounter = 0;
 
 const App = () => {
