@@ -1,19 +1,15 @@
 import React, { useState } from 'react';
 import { ChartWithInputs } from './chart-input-component';
 
-let chartCounter = 0;
-
 const App = () => {
   const [charts, setCharts] = useState<JSX.Element[]>([]);
 
   const appendChart = () => {
-    // Add new Chart to the current list of Charts
     setCharts((currentCharts) => [...currentCharts, <ChartWithInputs />]);
   };
 
   const removeChart = () => {
     setCharts((currentCharts) => {
-      // Remove the last Chart from the list
       const newCharts = [...currentCharts];
       newCharts.pop();
       return newCharts;

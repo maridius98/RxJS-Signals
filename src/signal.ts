@@ -1,15 +1,24 @@
-import { take, map, BehaviorSubject, Observable, bufferCount, combineLatest, OperatorFunction, switchMap, NEVER, interval, of, startWith, takeUntil } from "rxjs";
+import { take, map, BehaviorSubject, Observable, bufferCount, combineLatest, OperatorFunction, switchMap, NEVER, interval, of, startWith, takeUntil, filter } from "rxjs";
 import { formulaParser } from "./parser";
 import { point } from "./diagram";
-import { filter } from "rxjs";
+import { abs } from "mathjs";
 
 export class Signal {
 
 	private intervalSubject = new BehaviorSubject<number>(1);
 	private pauseSubject = new BehaviorSubject<boolean>(false);
-	private filterValue = new BehaviorSubject<number>(Infinity);
+	private filterSubject = new BehaviorSubject<number>(Infinity);
 	private counter = 0;
 	emittedSignal: Observable<point>;
+    formula: string;
+    scalar: number;
+
+    constructor(formulaName: string, scalar = 100){
+        this.formula = formulaName;
+        this.scalar = scalar;
+        console.log(this.formula);
+        this.emitSignal();
+    }
 
 	pausableObservable = this.intervalSubject.pipe(
 		switchMap(intervalValue => this.pauseSubject.pipe(
@@ -21,21 +30,26 @@ export class Signal {
 					return of(this.counter);
 				})
 				)
+				
 			)
         )),
 	);
 
+	filterSignal(){
+		this.appendOperators([filter(point => abs(point.y) < this.filterSubject.value)])
+	}
+
 	combineSignals(signals: Signal[]) {
 		const emittedSignals = signals.flatMap(s => s.emittedSignal);
-		emittedSignals.push(this.emittedSignal);
+		emittedSignals.unshift(this.emittedSignal);
 		this.emittedSignal = combineLatest(emittedSignals, (...points: point[]) => {
-		return points.reduce((acc, value) => {
-			return {
-			y: acc.y * value.y,
-			x: value.x
-			}
-		});
-		})
+            return points.reduce((acc, value) => {
+                return {
+                    y: acc.y * value.y,
+                    x: value.x
+                }
+            });
+        })
 	}
 
 	showVertex(){
@@ -46,19 +60,21 @@ export class Signal {
 			y: t[1].y,
 			isVertex: ((t[0].y < t[1].y && t[2].y < t[1].y) || (t[0].y > t[1].y && t[2].y > t[1].y))
 		    }))
-		]
+		,
+		],
+		
 	)}
 
 	appendOperators(operators: OperatorFunction<any, any>[]) {
 		this.emittedSignal = operators.reduce((observable, operator) => observable.pipe(operator), this.emittedSignal);
 	}
 
-	emitSignal(fraction: number, formulaIndex: number) {
+	emitSignal() {
 		this.emittedSignal = this.pausableObservable.pipe(
 		map((t) => ({
 			x: t,
-			y: formulaParser.evaluate(`f${formulaIndex}(${t / fraction})`),
-			})),
+			y: formulaParser.evaluate(`${this.formula}(${t/this.scalar})`),
+            })),
 		)
 	}
 
@@ -68,6 +84,10 @@ export class Signal {
 
 	changeInterval(value: number) {
         this.intervalSubject.next(value);
+	}
+
+	changeFilterSubject(value: number) {
+		this.filterSubject.next(value);
 	}
 
 	pause() {

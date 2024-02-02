@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Signal } from './signal';
 import { formulaParser } from "./parser";
-import { Observable, take, tap } from 'rxjs';
+import { Observable, Subject, Subscription, debounceTime, take, tap } from 'rxjs';
 import { createRealTimeLineChart, point } from './diagram';
 
 export const ChartWithInputs = () => {
@@ -10,18 +10,23 @@ export const ChartWithInputs = () => {
 	const signalRef = useRef<Signal>(null);
 	const signalsRef = useRef<Signal[]>(null);
 	const subscriptionRef = useRef(null);
-
-	const [formula, setFormula] = useState('sin(t^2)');
-	const [formulas, setFormulas] = useState(['t/10', 'cos(t)']);
+	const formulaSubcriptionRef = useRef<Subscription>(null)
+	const formulaSubjectRef = useRef<Subject<{value: string, index: number}>>(null);
+	const fraction = 100;
+	const [mainFormula, setFormula] = useState('sin(t^2)');
+	const [formulas, setFormulas] = useState([]);
 	const [intervalValue, setIntervalValue] = useState(1);
 	const [isPaused, setIsPaused] = useState(true);
-	const [filterValue, setFilterValue] = useState(-0.4);
+	const [filterValue, setFilterValue] = useState(1000);
 	const [samplesValue, setLengthValue] = useState(3000);
 	const [mergeFunctions, setMergeFunctions] = useState(false);
 
-	const handleFormula1Change = (event: any) => {
+	const handleMainFormulaChange = (event: any) => {
 		event.preventDefault();
 		setFormula(event.target.value);
+		if (formulaSubjectRef.current) {
+			formulaSubjectRef.current.next({ value: event.target.value, index: 1 });
+		}
 	}; 			
 
 	const handleFormulaChange = (index: number) => (event: any) => {
@@ -29,6 +34,9 @@ export const ChartWithInputs = () => {
 		const newFormulas = [...formulas];
 		newFormulas[index] = event.target.value;
 		setFormulas(newFormulas);
+		if (formulaSubjectRef.current) {
+			formulaSubjectRef.current.next({ index: index + 2, value: event.target.value });
+		}
 	};
 
 	const handleIntervalChange = (event: any) => {
@@ -51,25 +59,43 @@ export const ChartWithInputs = () => {
 		setMergeFunctions((prevMergeFunctions) => !prevMergeFunctions);
 	};
 
+	const subRef = () => {
+		formulaSubjectRef.current = new Subject<{value: string, index: number}>();
+		formulaSubcriptionRef.current = formulaSubjectRef.current.pipe(
+			debounceTime(2000),
+			tap(f => {
+				console.log(functionEvaluationString(f.index, f.value));
+				formulaParser.evaluate(functionEvaluationString(f.index, f.value));
+				})
+			).subscribe()
+	};
+
 	const renderChart = (signal: Observable<point>, index: number, chart: any) => {
 		subscriptionRef.current = signal.subscribe(point => {
 			chart.updateChart(point, index+1)
 		})
 	}
 
+	const handleAddFormula = () => {
+		setFormulas([...formulas, 't']);
+	};
+
+	const functionEvaluationString = (index: number, domain: string) => {
+		return `f${index}(t) = ${domain}`;
+	}
+
 	const appendOperators = () => {
 		if (mergeFunctions) {
-			formulaParser.evaluate(`f2(t) = ${formulas[0]}`)
-			formulaParser.evaluate(`f3(t) = ${formulas[1]}`)
-			const signal2 = new Signal()
-			const signal3 = new Signal()
-			signal2.emitSignal(100, 2);
-			signal3.emitSignal(100, 3);
-			signalsRef.current.push(signal2, signal3);
-			signalRef.current.combineSignals([signal2, signal3]);
-			signalRef.current.showVertex();
+			formulas.map((p, idx) => {
+				idx += 2;
+				const functionName = 'f' + idx;
+				formulaParser.evaluate(functionEvaluationString(idx, p));
+				const signal = new Signal(functionName, fraction);
+				signalsRef.current.push(signal);
+			})
+			signalRef.current.combineSignals(signalsRef.current);
+			signalRef.current.appendOperators([take(signalsRef.current.length * samplesValue)]);
 		}
-		signalRef.current.appendOperators([take(3*samplesValue)]);
 	}
 
 	const handleSubmit = (event: any) => {
@@ -80,17 +106,21 @@ export const ChartWithInputs = () => {
 		if (subscriptionRef.current) {
 			subscriptionRef.current.unsubscribe();
 		}
+		if (formulaSubcriptionRef.current) {
+			formulaSubcriptionRef.current.unsubscribe();
+		}
 		signalsRef.current = []
-		signalRef.current = new Signal();
-		signalsRef.current.push(signalRef.current)
-		chartRef.current.resetChart();
+		const fullMainFormula = `f1(t) = ` + mainFormula;
 		formulaParser.clear();
-		formulaParser.evaluate(`f1(t) = ` + formula);
-		signalRef.current.emitSignal(100, 1);
+		formulaParser.evaluate(fullMainFormula);
+		signalRef.current = new Signal(`f1`, fraction);
+		signalsRef.current.unshift(signalRef.current);
+		chartRef.current.resetChart();
 		appendOperators();
-		console.log(formulas);
-
 		signalRef.current.changeInterval(intervalValue);
+		signalRef.current.filterSignal();
+	
+		subRef();
 		renderChart(signalRef.current.emittedSignal, 1, chartRef.current);
 		setIsPaused(() => false);
 	};
@@ -99,12 +129,12 @@ export const ChartWithInputs = () => {
 		if (signalRef.current){
 			if (isPaused) {
 				signalsRef.current.map(s => {
-					s.pause()
+					s.pause();
 					});
 				}
 			else {
 				signalsRef.current.map(s => {
-					s.resume()
+					s.resume();
 				});
 			}
 		}
@@ -112,15 +142,16 @@ export const ChartWithInputs = () => {
 
 	useEffect(() => {
 		if (signalRef.current){
-		
+			signalRef.current.changeFilterSubject(filterValue);
 		}
 	}, [filterValue]);
 
 
 	useEffect(() => {
 		if (signalRef.current){
-			signalsRef.current.map(s => {
-				s.changeInterval(intervalValue)
+			signalsRef.current.map((s, idx) => {
+					s.changeInterval(intervalValue);
+					console.log(idx);
 				});
 		}
 	}, [intervalValue]);
@@ -133,8 +164,8 @@ export const ChartWithInputs = () => {
 				<input
 					type="text"
 					id="formula1"
-					value={formula}
-					onChange={handleFormula1Change}
+					value={mainFormula}
+					onChange={handleMainFormulaChange}
 					/>
 			</div>
 
@@ -154,8 +185,8 @@ export const ChartWithInputs = () => {
 				<input
 				type="range"
 				id="filter"
-				min="-10"
-				max="10" 
+				min="0"
+				max="200" 
 				value={filterValue}
 				onChange={handleFilterChange}
 				/>
@@ -184,7 +215,7 @@ export const ChartWithInputs = () => {
 			{mergeFunctions &&
 			formulas.map((formula, index) => (
 				<div key={index} className="label-input">
-				<label htmlFor={`formula${index+1}`}>{`formula${index+1}`}</label>
+				<label htmlFor={`formula${index+1}`}>{`Formula ${index+1}`}</label>
 				<input
 					type="text"
 					id={`formula${index+1}`}
@@ -193,6 +224,11 @@ export const ChartWithInputs = () => {
 				/>
 				</div>
 			))}
+			{mergeFunctions && (
+				<div>
+					<button type="button" onClick={handleAddFormula}>Add Formula</button>
+				</div>
+			)}
 		<button type="button" onClick={handlePauseToggle}>
 			{isPaused ? 'Resume' : 'Pause'}
 		</button>
